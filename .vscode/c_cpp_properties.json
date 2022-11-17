@@ -1,0 +1,14 @@
+{
+    "configurations": [
+        {
+            "name": "ESP8266",
+            "includePath": [
+                "${workspaceFolder}/**",
+                "${workspaceFolder}/build/include",
+                "C:/msys32/home/${USERNAME}/esp/ESP8266_RTOS_SDK/components/**"
+            ],
+            "compilerPath": "C:/msys32/mingw32/bin/xtensa-lx106-elf-gcc.exe"
+        }
+    ],
+    "version": 4
+}
