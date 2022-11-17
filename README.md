@@ -50,19 +50,19 @@ SPI up to 4MHz
 |12  |D_IN  |SPI MOSI                       |HSPI MOSI GPIO13 (D7)
 |13  |D_OUT |-
 |14  |-     |-
-|15  |VCOMH |capacitor to ground
+|15  |VCOMH |100nF capacitor to ground
 |16  |VCL   |ground
 |17  |VCC   |12V
 |18  |-     |
 |19  |-     |
 |20  |-     |
 
-### Controller details
+### Controller/display details
 
 `COM0` to `COM63`: common (row) drivers  
 `SA0/SB0/SC0` to `SA95/SB95/SC95`: segment (column) drivers, 96x3=288
 
-`Multiplex ratio` is set to 47 because we only use `COM0` to `COM47` (48 rows).
+`Multiplex ratio` is set to 47 because we only use `COM0` to `COM47` (48 rows).  
 `COM Split Odd Even` is enabled because the row connections are interlaced.
 
 Native display origin (COM0, SEG0) is at lower right; to move the origin to the top left:
