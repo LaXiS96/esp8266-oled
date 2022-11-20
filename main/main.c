@@ -24,6 +24,12 @@ void app_main()
 
     pictiva_init(RES_GPIO, DC_GPIO);
     pictiva_on();
+    pictiva_set_pixel(0, 0, 255);
+    pictiva_set_pixel(0, 143, 255);
+    pictiva_set_pixel(0, 283, 255);
+    pictiva_set_pixel(1, 0, 255);
+    pictiva_set_pixel(47, 287, 255);
+    pictiva_draw();
 
     // send_command(&(uint32_t){CMD_MODE_ALL_ON}, 1);
 
