@@ -23,34 +23,24 @@ void app_main()
     spi_init(HSPI_HOST, &spi_config);
 
     pictiva_init(RES_GPIO, DC_GPIO);
+    pictiva_set_brightness(3);
     pictiva_on();
-    pictiva_set_pixel(0, 0, 255);
-    pictiva_set_pixel(0, 143, 255);
-    pictiva_set_pixel(0, 283, 255);
-    pictiva_set_pixel(1, 0, 255);
-    pictiva_set_pixel(47, 287, 255);
+    // pictiva_set_pixel(0, 0, 255);
+    // pictiva_set_pixel(0, 143, 255);
+    // pictiva_set_pixel(0, 283, 255);
+    // pictiva_set_pixel(1, 0, 255);
+    // pictiva_set_pixel(47, 287, 255);
+
+    char *str = malloc(256);
+    if (str == NULL)
+        ESP_LOGE("main", "str is null");
+
+    for (uint32_t i = 0; i < 255; i++)
+        *(str + i) = i + 1;
+    *(str + 255) = '\0';
+
+    pictiva_text(str);
     pictiva_draw();
-
-    // send_command(&(uint32_t){CMD_MODE_ALL_ON}, 1);
-
-    // uint32_t off = 0;
-    // for (uint32_t i = 0; i < 96 * 48; i++)
-    // {
-    //     // if (i == 0)
-    //     //     send_data(&(uint32_t){0b11111000 | (0b00011111 << 8)}, 2);
-    //     // else if (i == 96 * 48 - 1)
-    //     //     send_data(&(uint32_t){0b00000111 | (0b11111111 << 8)}, 2);
-    //     // else
-    //     //     send_data(&(uint32_t){0}, 2);
-
-    //     if (i == (1 << off) || i == (96 * 48 - 1))
-    //     {
-    //         send_data(&(uint32_t){0b11111000 | (0b00011111 << 8)}, 2);
-    //         off++;
-    //     }
-    //     else
-    //         send_data(&(uint32_t){0}, 2);
-    // }
 
     while (1)
     {

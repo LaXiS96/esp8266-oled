@@ -6,15 +6,7 @@
 #include "driver/gpio.h"
 #include "driver/spi.h"
 
-// TODO debugging
-#include "esp_log.h"
-static inline int32_t asm_ccount(void)
-{
-    int32_t r;
-    asm volatile("rsr %0, ccount"
-                 : "=r"(r));
-    return r;
-}
+#include "font5x7.h"
 
 /// Gets the smallest multiple of stride that is bigger than val
 #define ALIGN(val, stride) ((val) % (stride) != 0 ? (val) + 4 - ((val) % (stride)) : (val))
@@ -89,6 +81,32 @@ static esp_err_t spi_send3(send_type_t type, uint8_t data1, uint8_t data2, uint8
     return spi_send(type, (uint32_t *)&(uint8_t[]){data1, data2, data3}, 3);
 }
 
+esp_err_t pictiva_draw()
+{
+    // Reset row and column address pointers
+    spi_send3(SEND_COMMAND, CMD_ROW_ADDRESS, 0, 47);
+    spi_send3(SEND_COMMAND, CMD_COLUMN_ADDRESS, 0, 95);
+
+    // Map to 565 pixel data and send to display
+    uint8_t *framebufptr = (uint8_t *)&framebuf;
+    uint8_t *maxptr = framebufptr + 288 * 48;
+    while (framebufptr < maxptr)
+    {
+        uint8_t buf[64] = {0}; // ESP8266 is limited to 64 bytes per SPI transfer
+        for (uint32_t i = 0; i < sizeof(buf); i += 2)
+        {
+            buf[i] = ((*framebufptr & 0b11111) << 3) |
+                     ((*(framebufptr + 1) & 0b111000) >> 3);
+            buf[i + 1] = ((*(framebufptr + 1) & 0b111) << 5) |
+                         (*(framebufptr + 2) & 0b11111);
+            framebufptr += 3;
+        }
+        spi_send(SEND_DATA, (uint32_t *)&buf, sizeof(buf));
+    }
+
+    return ESP_OK; // TODO
+}
+
 esp_err_t pictiva_init(uint32_t res_gpio, uint32_t dc_gpio)
 {
     _res_gpio = res_gpio;
@@ -113,14 +131,24 @@ esp_err_t pictiva_init(uint32_t res_gpio, uint32_t dc_gpio)
     return spi_send(SEND_COMMAND, (uint32_t *)&init_cmds, INIT_CMDS_LEN);
 }
 
+esp_err_t pictiva_off()
+{
+    return spi_send1(SEND_COMMAND, CMD_DISPLAY_OFF);
+}
+
 esp_err_t pictiva_on()
 {
     return spi_send1(SEND_COMMAND, CMD_DISPLAY_ON);
 }
 
-esp_err_t pictiva_off()
+esp_err_t pictiva_set_brightness(uint32_t value)
 {
-    return spi_send1(SEND_COMMAND, CMD_DISPLAY_OFF);
+    if (value > 15)
+        value = 15;
+
+    spi_send2(SEND_COMMAND, CMD_MASTER_CURRENT, value);
+
+    return ESP_OK; // TODO
 }
 
 esp_err_t pictiva_set_pixel(uint32_t row, uint32_t col, uint8_t value)
@@ -130,36 +158,42 @@ esp_err_t pictiva_set_pixel(uint32_t row, uint32_t col, uint8_t value)
     return ESP_OK; // TODO
 }
 
-esp_err_t pictiva_draw()
+void pictiva_text(const char *str)
 {
-    uint32_t start_count;
-    uint32_t end_count;
+    uint32_t x = 0;
+    uint32_t y = 0;
 
-    start_count = asm_ccount();
-
-    // Reset row and column address pointers
-    spi_send3(SEND_COMMAND, CMD_ROW_ADDRESS, 0, 47);
-    spi_send3(SEND_COMMAND, CMD_COLUMN_ADDRESS, 0, 95);
-
-    // Map to 565 pixel data and send to display
-    uint8_t *framebufptr = (uint8_t *)&framebuf;
-    uint8_t *maxptr = framebufptr + 288 * 48;
-    while (framebufptr < maxptr)
+    while (*str != '\0')
     {
-        uint8_t buf[64] = {0}; // ESP8266 is limited to 64 bytes per SPI transfer
-        for (uint32_t i = 0; i < sizeof(buf); i += 2)
+        if (x + 5 > 287)
         {
-            buf[i] = ((*framebufptr & 0b11111) << 3) |
-                     ((*(framebufptr + 1) & 0b111000) >> 3);
-            buf[i + 1] = ((*(framebufptr + 1) & 0b111) << 5) |
-                         (*(framebufptr + 2) & 0b11111);
-            framebufptr += 3;
+            x = 0;
+            y += 8;
+            if (y > 47)
+                y = 0;
         }
-        spi_send(SEND_DATA, (uint32_t *)&buf, 64);
+
+        uint8_t *glyph = &font5x7[*str * 5];
+        uint32_t max = x + 5;
+        while (x < max)
+        {
+            framebuf[y + 0][x] = (*glyph & 0b00000001) != 0 ? 0xff : 0;
+            framebuf[y + 1][x] = (*glyph & 0b00000010) != 0 ? 0xff : 0;
+            framebuf[y + 2][x] = (*glyph & 0b00000100) != 0 ? 0xff : 0;
+            framebuf[y + 3][x] = (*glyph & 0b00001000) != 0 ? 0xff : 0;
+            framebuf[y + 4][x] = (*glyph & 0b00010000) != 0 ? 0xff : 0;
+            framebuf[y + 5][x] = (*glyph & 0b00100000) != 0 ? 0xff : 0;
+            framebuf[y + 6][x] = (*glyph & 0b01000000) != 0 ? 0xff : 0;
+            framebuf[y + 7][x] = (*glyph & 0b10000000) != 0 ? 0xff : 0;
+            x++;
+            glyph++;
+        }
+
+        x++;
+        if (x < 288)
+            for (uint8_t i = 0; i < 8; i++)
+                framebuf[y + i][x] = 0;
+
+        str++;
     }
-
-    end_count = asm_ccount();
-    ESP_LOGI("pictiva", "start %d end %d diff %d", start_count, end_count, end_count - start_count);
-
-    return ESP_OK; // TODO
 }
