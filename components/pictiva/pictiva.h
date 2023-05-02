@@ -1,6 +1,11 @@
 #pragma once
 
+#include <stdbool.h>
+
 #include "esp_err.h"
+
+/// Whether the framebuffer contents have been modified since last draw
+static bool pictiva_draw_pending = true;
 
 /// Draw internal framebuffer to the display
 esp_err_t pictiva_draw();

@@ -6,6 +6,8 @@
 #include "driver/gpio.h"
 #include "driver/spi.h"
 
+// TODO do we need all glyphs in this font?
+// TODO handle different and bigger fonts
 #include "font5x7.h"
 
 /// Gets the smallest multiple of stride that is bigger than val
@@ -103,7 +105,7 @@ esp_err_t pictiva_draw()
         }
         spi_send(SEND_DATA, (uint32_t *)&buf, sizeof(buf));
     }
-
+    pictiva_draw_pending = false;
     return ESP_OK; // TODO
 }
 
@@ -146,15 +148,13 @@ esp_err_t pictiva_set_brightness(uint32_t value)
     if (value > 15)
         value = 15;
 
-    spi_send2(SEND_COMMAND, CMD_MASTER_CURRENT, value);
-
-    return ESP_OK; // TODO
+    return spi_send2(SEND_COMMAND, CMD_MASTER_CURRENT, value);
 }
 
 esp_err_t pictiva_set_pixel(uint32_t row, uint32_t col, uint8_t value)
 {
     framebuf[row][col] = value;
-
+    pictiva_draw_pending = true;
     return ESP_OK; // TODO
 }
 
@@ -196,4 +196,5 @@ void pictiva_text(const char *str)
 
         str++;
     }
+    pictiva_draw_pending = true;
 }
